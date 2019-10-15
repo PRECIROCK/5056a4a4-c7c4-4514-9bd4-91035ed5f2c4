@@ -5,7 +5,21 @@ import time
 from difflib import SequenceMatcher
 
 
-def pretty_print(logger):
+def pretty_print(logger, serializer_function=lambda obj: obj.__dict__):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            serializable_obj = func(*args, **kwargs)
+            try:
+                formatted_output = json.dumps(serializable_obj, indent=4, default = serializer_function)
+                print(formatted_output)
+            except TypeError as e:
+                logger.error("Type error encounter with message {}".format(e))
+                raise
+        return wrapper()
+    return decorator
+
+
     pass
 
 
@@ -38,7 +52,7 @@ class StringWrapper(object):
     def __init__(self, value, case_sensitive=False, default_similarity_threshold=DEFAULT_THRESHOLD):
         self.default_similarity_threshold = default_similarity_threshold
         self.case_sensitive = case_sensitive
-        self._value = value
+        self._value = value # comienza con un guion bajo porque oculta esa variable
 
     def _sensitivity_matching(self, string):
         return string if self.case_sensitive else string.lower()
@@ -46,3 +60,21 @@ class StringWrapper(object):
     @property
     def value(self):
         return self._sensitivity_matching(self._value)
+
+    @Decorators.sensitivity_matching_meta_decorator()
+    def contains(self, pattern, reverse=False):
+        return (pattern in self.value) if not reverse else (self.value in pattern)
+
+    @Decorators.sensitivity_matching_meta_decorator()
+    def similarity_ratio(self, pattern):
+        return SequenceMatcher(None, self.value, pattern).ratio()
+
+    def similar_enought(self, pattern, threshold=None):
+        min_ratio = threshold if threshold is not None else self.default_similarity_threshold
+        return self.similarity_ratio(pattern)> min_ratio
+
+    def boolean_search(self, pattern, exact=False):
+        return self.contains(pattern, reverse=True) if exact else self.similar_enought(pattern, threshold=threshold)
+
+
+
