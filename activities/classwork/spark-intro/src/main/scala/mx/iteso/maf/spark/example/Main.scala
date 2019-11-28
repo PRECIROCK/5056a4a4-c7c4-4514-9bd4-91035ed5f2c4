@@ -20,7 +20,15 @@ object Main extends Context.Spark {
     spark.read.textFile(inputPath)
 
   // Perform word count
-  def wordCount(inputPath: String): Dataset[WordCount] = ???
+  def wordCount(inputPath: String) = getRawData(inputPath)
+    .flatMap(book => splitLine(book))
+    .map(word => standardize(word))
+    .filter(_.length > 1)
+    .groupByKey(identity)
+    .count()
+    .map {
+      case (w, c) => WordCount(w, c)
+    }
 
   def main(args: Array[String]): Unit = {
 
