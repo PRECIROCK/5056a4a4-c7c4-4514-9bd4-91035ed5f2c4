@@ -34,5 +34,5 @@ object PrimeSearch {
     println(result)
 
   }
-
+  // sbt "runMain example.exercises.PrimeSearch 1 80"
 }
